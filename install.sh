@@ -108,62 +108,27 @@ done
 read -rp "  Ghost API Version [v5.0]: " GHOST_API_VERSION_INPUT
 GHOST_API_VERSION="${GHOST_API_VERSION_INPUT:-v5.0}"
 
-# ─── Update ~/.claude.json ───────────────────────────────────────────────────
+# ─── Register with Claude Code ───────────────────────────────────────────────
 
-info "Registering ghost-mcp in ~/.claude.json..."
+info "Registering ghost-mcp with Claude Code..."
 
-# JSON-encode every value before interpolating into the heredoc so that special
-# characters (quotes, backslashes, unicode) in user input can't break the script.
+if ! command -v claude &>/dev/null; then
+  fatal "Claude Code CLI ('claude') not found. Install Claude Code and re-run."
+fi
+
 serverPath="${SCRIPT_DIR}/build/server.js"
-ghostApiUrlJson=$(node -e "process.stdout.write(JSON.stringify(process.argv[1]))" "$GHOST_API_URL")
-ghostAdminApiKeyJson=$(node -e "process.stdout.write(JSON.stringify(process.argv[1]))" "$GHOST_ADMIN_API_KEY")
-ghostApiVersionJson=$(node -e "process.stdout.write(JSON.stringify(process.argv[1]))" "$GHOST_API_VERSION")
-serverPathJson=$(node -e "process.stdout.write(JSON.stringify(process.argv[1]))" "$serverPath")
 
-result=$(node << NODEJS
-const fs = require('fs');
-const claudeJsonPath = process.env.HOME + '/.claude.json';
+# Remove any existing entry first so 'add' is always idempotent
+claude mcp remove ghost-mcp --scope user 2>/dev/null || true
 
-// All values arrive as JSON literals (pre-encoded by bash above)
-const actualServerPath = ${serverPathJson};
-const ghostApiUrl      = ${ghostApiUrlJson};
-const ghostAdminApiKey = ${ghostAdminApiKeyJson};
-const ghostApiVersion  = ${ghostApiVersionJson};
+claude mcp add ghost-mcp \
+  --scope user \
+  -e "GHOST_API_URL=${GHOST_API_URL}" \
+  -e "GHOST_ADMIN_API_KEY=${GHOST_ADMIN_API_KEY}" \
+  -e "GHOST_API_VERSION=${GHOST_API_VERSION}" \
+  -- node "$serverPath"
 
-// Load existing config (full object) or start fresh
-let config = {};
-if (fs.existsSync(claudeJsonPath)) {
-  const raw = fs.readFileSync(claudeJsonPath, 'utf8');
-  try {
-    config = JSON.parse(raw);
-  } catch (e) {
-    process.stderr.write('ERROR: ~/.claude.json exists but is not valid JSON. Fix it manually and re-run.\n');
-    process.exit(1);
-  }
-}
-
-// Ensure mcpServers key exists without disturbing any other top-level keys
-if (!config.mcpServers) config.mcpServers = {};
-
-// Upsert only the ghost-mcp entry — all other mcpServers entries are untouched
-config.mcpServers['ghost-mcp'] = {
-  command: 'node',
-  args: [actualServerPath],
-  env: {
-    GHOST_API_URL: ghostApiUrl,
-    GHOST_ADMIN_API_KEY: ghostAdminApiKey,
-    GHOST_API_VERSION: ghostApiVersion,
-  }
-};
-
-// Write the full config back (pretty-printed, trailing newline, owner-only permissions)
-fs.writeFileSync(claudeJsonPath, JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
-process.stdout.write('OK');
-NODEJS
-)
-
-[[ "$result" == "OK" ]] || fatal "Failed to update ~/.claude.json"
-success "~/.claude.json updated (ghost-mcp entry registered)"
+success "ghost-mcp registered (user scope)"
 
 # ─── Done ────────────────────────────────────────────────────────────────────
 
@@ -171,7 +136,7 @@ echo ""
 echo -e "${GREEN}${BOLD}Setup complete!${RESET}"
 echo ""
 echo -e "  ${BOLD}Server path:${RESET}  ${SCRIPT_DIR}/build/server.js"
-echo -e "  ${BOLD}Config file:${RESET}  ~/.claude.json  (mcpServers.ghost-mcp)"
+echo -e "  ${BOLD}Registered:${RESET}   claude mcp list (user scope)"
 echo ""
 echo -e "${BLUE}Next steps:${RESET}"
 echo "  1. Restart Claude Code (quit and reopen, or run: claude mcp restart)"
