@@ -108,6 +108,32 @@ done
 read -rp "  Ghost API Version [v5.0]: " GHOST_API_VERSION_INPUT
 GHOST_API_VERSION="${GHOST_API_VERSION_INPUT:-v5.0}"
 
+# ─── Clean up Claude Desktop config ─────────────────────────────────────────
+
+CLAUDE_DESKTOP_CONFIG="${HOME}/Library/Application Support/Claude/claude_desktop_config.json"
+
+if [[ -f "$CLAUDE_DESKTOP_CONFIG" ]]; then
+  info "Removing ghost-mcp from Claude Desktop config (if present)..."
+  node << NODEJS
+const fs = require('fs');
+const path = '${CLAUDE_DESKTOP_CONFIG}';
+const raw = fs.readFileSync(path, 'utf8');
+let config;
+try { config = JSON.parse(raw); } catch (e) {
+  process.stderr.write('WARNING: claude_desktop_config.json is not valid JSON — skipping cleanup.\n');
+  process.exit(0);
+}
+if (config.mcpServers && config.mcpServers['ghost-mcp']) {
+  delete config.mcpServers['ghost-mcp'];
+  fs.writeFileSync(path, JSON.stringify(config, null, 2) + '\n');
+  process.stdout.write('removed\n');
+} else {
+  process.stdout.write('not present\n');
+}
+NODEJS
+  success "Claude Desktop config cleaned up"
+fi
+
 # ─── Register with Claude Code ───────────────────────────────────────────────
 
 info "Registering ghost-mcp with Claude Code..."
@@ -118,8 +144,10 @@ fi
 
 serverPath="${SCRIPT_DIR}/build/server.js"
 
-# Remove any existing entry first so 'add' is always idempotent
+# Remove any existing entry from all scopes so 'add' is always idempotent
 claude mcp remove ghost-mcp --scope user 2>/dev/null || true
+claude mcp remove ghost-mcp --scope local 2>/dev/null || true
+claude mcp remove ghost-mcp --scope project 2>/dev/null || true
 
 claude mcp add ghost-mcp \
   --scope user \
