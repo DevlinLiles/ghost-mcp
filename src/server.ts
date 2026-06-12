@@ -16,7 +16,7 @@ import {
 // Create an MCP server instance
 const server = new McpServer({
     name: "ghost-mcp-ts",
-    version: "1.0.0", // TODO: Get version from package.json
+    version: "1.1.0", // TODO: Get version from package.json
 }, {
     capabilities: {
         resources: {}, // Capabilities will be enabled as handlers are registered

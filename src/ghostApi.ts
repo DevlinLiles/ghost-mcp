@@ -4,8 +4,17 @@ import path from 'path';
 import axios, { type AxiosInstance } from 'axios';
 import { GHOST_API_URL, GHOST_ADMIN_API_KEY, GHOST_API_VERSION } from './config';
 
-type BrowseParams = Record<string, string | number | undefined>;
-type ReadParams = { id?: string; slug?: string } & Record<string, unknown>;
+type BrowseParams = {
+  filter?: string;
+  limit?: number;
+  page?: number;
+  order?: string;
+  fields?: string;
+  include?: string;
+  formats?: string;
+} & Record<string, string | number | undefined>;
+type ReadParams = { id?: string; slug?: string; fields?: string; include?: string; formats?: string } & Record<string, unknown>;
+type BrowseResult = { items: any[]; meta?: any };
 
 class ResourceClient {
   constructor(
@@ -13,7 +22,7 @@ class ResourceClient {
     private readonly client: GhostAdminClient,
   ) {}
 
-  browse(params?: BrowseParams): Promise<any[]> {
+  browse(params?: BrowseParams): Promise<BrowseResult> {
     return this.client._browse(this.resource, params);
   }
 
@@ -92,11 +101,12 @@ class GhostAdminClient {
     return `${header}.${payload}.${sig}`;
   }
 
-  async _browse(resource: string, params?: BrowseParams): Promise<any[]> {
+  async _browse(resource: string, params?: BrowseParams): Promise<BrowseResult> {
+    if (params && typeof params.limit === 'number') {
+      params = { ...params, limit: Math.min(params.limit, 100) };
+    }
     const { data } = await this.http.get(`/${resource}/`, { params });
-    const result: any[] & { meta?: any } = data[resource];
-    if (data.meta) result.meta = data.meta;
-    return result;
+    return { items: data[resource], meta: data.meta };
   }
 
   async _read(resource: string, params: ReadParams): Promise<any> {
@@ -124,8 +134,18 @@ class GhostAdminClient {
 
   async _uploadImage(params: { file: string; purpose?: string; ref?: string }): Promise<any> {
     const buf = await readFile(params.file);
+    const ext = path.extname(params.file).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.svg': 'image/svg+xml',
+    };
+    const mimeType = mimeTypes[ext] ?? 'application/octet-stream';
     const form = new FormData();
-    form.append('file', new Blob([buf]), path.basename(params.file));
+    form.append('file', new Blob([buf], { type: mimeType }), path.basename(params.file));
     if (params.purpose) form.append('purpose', params.purpose);
     if (params.ref) form.append('ref', params.ref);
     const { data } = await this.http.post('/images/upload/', form);

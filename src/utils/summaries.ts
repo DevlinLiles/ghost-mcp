@@ -3,6 +3,35 @@
 // and navigational metadata. Use the corresponding *_read tool to fetch
 // a full object once you have the id or slug.
 
+// Default fields sent to Ghost via ?fields= when the caller does not request
+// included relations. Must stay in sync with the to*Summary keys below
+// (relations like tags/authors/roles are excluded — they require ?include=,
+// which cannot be combined with ?fields=).
+export const DEFAULT_POST_FIELDS =
+  "id,title,slug,status,featured,created_at,updated_at,published_at,url,custom_excerpt";
+export const DEFAULT_PAGE_FIELDS = DEFAULT_POST_FIELDS;
+export const DEFAULT_MEMBER_FIELDS =
+  "id,name,email,status,created_at,last_seen_at,email_count,email_open_rate";
+export const DEFAULT_USER_FIELDS = "id,name,email,slug,status,created_at";
+export const DEFAULT_TAG_FIELDS = "id,name,slug,description,created_at";
+export const DEFAULT_NEWSLETTER_FIELDS =
+  "id,name,status,visibility,subscribe_on_signup,sort_order";
+export const DEFAULT_TIER_FIELDS =
+  "id,name,type,active,monthly_price,yearly_price,currency";
+export const DEFAULT_OFFER_FIELDS =
+  "id,name,code,status,type,amount,cadence,currency,redemption_count";
+export const DEFAULT_INVITE_FIELDS = "id,email,role_id,status,created_at";
+export const DEFAULT_ROLE_FIELDS = "id,name,description";
+
+// Extra non-relation metadata returned by posts_read/pages_read on top of the
+// browse defaults (still excludes html/lexical/mobiledoc content).
+export const POST_READ_FIELDS =
+  DEFAULT_POST_FIELDS +
+  ",uuid,visibility,email_only,canonical_url,feature_image,feature_image_alt,meta_title,meta_description";
+export const PAGE_READ_FIELDS =
+  DEFAULT_PAGE_FIELDS +
+  ",uuid,visibility,canonical_url,feature_image,feature_image_alt,meta_title,meta_description,show_title_and_feature_image";
+
 export function toPostSummary(post: any) {
   return {
     id: post.id,
