@@ -34,26 +34,26 @@ const authorRef = z.union([
   }),
 ]);
 const postMutableFields = {
-  html: z.string().optional(),
+  html: z.string().optional().describe("HTML content for the post. Any <img> src values must be publicly accessible URLs — upload local images via images_upload first and use the returned URL."),
   lexical: z.string().optional(),
-  status: z.string().optional(),
+  status: z.string().optional().describe("Post status: 'draft', 'published', 'scheduled', or 'sent'. All image URLs referenced in the post must be uploaded and accessible before setting status to 'published'."),
   slug: z.string().optional(),
   visibility: z.string().optional(),
   featured: z.boolean().optional(),
   email_only: z.boolean().optional(),
   published_at: z.string().optional(),
   custom_excerpt: z.string().optional(),
-  feature_image: z.string().optional(),
+  feature_image: z.string().url().optional().describe("Publicly accessible HTTPS URL of the feature image. Use the URL returned by images_upload for Ghost-hosted images."),
   feature_image_alt: z.string().optional(),
   feature_image_caption: z.string().optional(),
   meta_title: z.string().optional(),
   meta_description: z.string().optional(),
   og_title: z.string().optional(),
   og_description: z.string().optional(),
-  og_image: z.string().optional(),
+  og_image: z.string().url().optional().describe("Publicly accessible HTTPS URL for the Open Graph image. Use the URL returned by images_upload for Ghost-hosted images."),
   twitter_title: z.string().optional(),
   twitter_description: z.string().optional(),
-  twitter_image: z.string().optional(),
+  twitter_image: z.string().url().optional().describe("Publicly accessible HTTPS URL for the Twitter card image. Use the URL returned by images_upload for Ghost-hosted images."),
   codeinjection_head: z.string().optional(),
   codeinjection_foot: z.string().optional(),
   canonical_url: z.string().optional(),
@@ -112,6 +112,7 @@ export function registerPostTools(server: McpServer) {
   // Add post
   server.tool(
     "posts_add",
+    "Create a new Ghost post. If the post includes images (feature_image, og_image, twitter_image, or <img> tags in html), upload them first using images_upload and use the returned URLs. Setting status to 'published' immediately makes the post live.",
     addParams,
     async (args, _extra) => {
       // If html is present, use source: "html" to ensure Ghost uses the html content
@@ -131,6 +132,7 @@ export function registerPostTools(server: McpServer) {
   // Edit post
   server.tool(
     "posts_edit",
+    "Update an existing Ghost post. Requires the current updated_at timestamp to prevent conflicting edits. If adding or changing images, upload them via images_upload first and use the returned URLs. Changing status to 'published' immediately makes the post live.",
     editParams,
     async (args, _extra) => {
       // If html is present, use source: "html" to ensure Ghost uses the html content for updates

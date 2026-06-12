@@ -14,6 +14,7 @@ const uploadParams = {
 export function registerImageTools(server: McpServer) {
   server.tool(
     "images_upload",
+    "Upload an image file to Ghost storage. Returns a 'url' field — use that URL as the value for feature_image, og_image, twitter_image, or src attributes in HTML content when creating or editing posts and pages. Images must be uploaded before a post referencing them is published.",
     uploadParams,
     async (args, _extra) => {
       const result = await ghostApiClient.images.upload(args);
