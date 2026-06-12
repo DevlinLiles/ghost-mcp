@@ -108,31 +108,50 @@ done
 read -rp "  Ghost API Version [v5.0]: " GHOST_API_VERSION_INPUT
 GHOST_API_VERSION="${GHOST_API_VERSION_INPUT:-v5.0}"
 
-# ─── Clean up Claude Desktop config ─────────────────────────────────────────
+# ─── Register with Claude Desktop ────────────────────────────────────────────
 
 CLAUDE_DESKTOP_CONFIG="${HOME}/Library/Application Support/Claude/claude_desktop_config.json"
+CLAUDE_DESKTOP_DIR="${HOME}/Library/Application Support/Claude"
 
-if [[ -f "$CLAUDE_DESKTOP_CONFIG" ]]; then
-  info "Removing ghost-mcp from Claude Desktop config (if present)..."
-  node << NODEJS
+info "Registering ghost-mcp with Claude Desktop..."
+
+mkdir -p "$CLAUDE_DESKTOP_DIR"
+
+# Claude Desktop launches with a minimal env — 'node' won't resolve via PATH.
+# Capture the absolute binary path now so the config is self-contained.
+NODE_BIN="$(command -v node)"
+[[ -n "$NODE_BIN" ]] || fatal "Cannot resolve absolute path for node — ensure Node.js is on PATH and re-run."
+
+node << NODEJS
 const fs = require('fs');
-const path = '${CLAUDE_DESKTOP_CONFIG}';
-const raw = fs.readFileSync(path, 'utf8');
-let config;
-try { config = JSON.parse(raw); } catch (e) {
-  process.stderr.write('WARNING: claude_desktop_config.json is not valid JSON — skipping cleanup.\n');
-  process.exit(0);
+const configPath = '${CLAUDE_DESKTOP_CONFIG}';
+const serverPath = '${SCRIPT_DIR}/build/server.js';
+const nodeBin   = '${NODE_BIN}';
+
+let config = {};
+if (fs.existsSync(configPath)) {
+  const raw = fs.readFileSync(configPath, 'utf8');
+  try { config = JSON.parse(raw); } catch (e) {
+    process.stderr.write('WARNING: claude_desktop_config.json is not valid JSON — will overwrite.\n');
+  }
 }
-if (config.mcpServers && config.mcpServers['ghost-mcp']) {
-  delete config.mcpServers['ghost-mcp'];
-  fs.writeFileSync(path, JSON.stringify(config, null, 2) + '\n');
-  process.stdout.write('removed\n');
-} else {
-  process.stdout.write('not present\n');
-}
+
+config.mcpServers = config.mcpServers || {};
+config.mcpServers['ghost-mcp'] = {
+  command: nodeBin,
+  args: [serverPath],
+  env: {
+    GHOST_API_URL: '${GHOST_API_URL}',
+    GHOST_ADMIN_API_KEY: '${GHOST_ADMIN_API_KEY}',
+    GHOST_API_VERSION: '${GHOST_API_VERSION}'
+  }
+};
+
+fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
+process.stdout.write('written\n');
 NODEJS
-  success "Claude Desktop config cleaned up"
-fi
+
+success "Claude Desktop config updated"
 
 # ─── Register with Claude Code ───────────────────────────────────────────────
 
@@ -164,12 +183,14 @@ echo ""
 echo -e "${GREEN}${BOLD}Setup complete!${RESET}"
 echo ""
 echo -e "  ${BOLD}Server path:${RESET}  ${SCRIPT_DIR}/build/server.js"
-echo -e "  ${BOLD}Registered:${RESET}   claude mcp list (user scope)"
+echo -e "  ${BOLD}Claude Code:${RESET}  claude mcp list (user scope)"
+echo -e "  ${BOLD}Claude Desktop:${RESET}  ~/Library/Application Support/Claude/claude_desktop_config.json"
 echo ""
 echo -e "${BLUE}Next steps:${RESET}"
 echo "  1. Restart Claude Code (quit and reopen, or run: claude mcp restart)"
-echo "  2. Verify the server is active:  /mcp"
-echo "  3. Try: \"List my Ghost posts\""
+echo "  2. Restart Claude Desktop (quit and reopen from the menu bar)"
+echo "  3. Verify Claude Code: /mcp"
+echo "  4. Try: \"List my Ghost posts\""
 echo ""
 echo -e "${YELLOW}To update your Ghost credentials, re-run:${RESET}  ./install.sh"
 echo ""
