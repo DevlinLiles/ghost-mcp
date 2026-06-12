@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ghostApiClient } from "../ghostApi";
+import { toUserSummary } from "../utils/summaries";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -35,6 +36,7 @@ export function registerUserTools(server: McpServer) {
   // Browse users
   server.tool(
     "users_browse",
+    "Returns a summary list of users (id, name, email, slug, status, created_at, roles). Use users_read with an id, email, or slug to fetch full detail including bio, location, social links, and profile images.",
     browseParams,
     async (args, _extra) => {
       const users = await ghostApiClient.users.browse(args);
@@ -42,7 +44,7 @@ export function registerUserTools(server: McpServer) {
         content: [
           {
             type: "text",
-            text: JSON.stringify(users, null, 2),
+            text: JSON.stringify(users.map(toUserSummary), null, 2),
           },
         ],
       };

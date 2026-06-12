@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ghostApiClient } from "../ghostApi";
+import { toOfferSummary } from "../utils/summaries";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -44,6 +45,7 @@ export function registerOfferTools(server: McpServer) {
   // Browse offers
   server.tool(
     "offers_browse",
+    "Returns a summary list of offers (id, name, code, status, type, amount, cadence, currency, redemption_count). Use offers_read with an id or code to fetch full detail including display title, description, duration, and tier.",
     browseParams,
     async (args, _extra) => {
       const offers = await ghostApiClient.offers.browse(args);
@@ -51,7 +53,7 @@ export function registerOfferTools(server: McpServer) {
         content: [
           {
             type: "text",
-            text: JSON.stringify(offers, null, 2),
+            text: JSON.stringify(offers.map(toOfferSummary), null, 2),
           },
         ],
       };

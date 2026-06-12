@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ghostApiClient } from "../ghostApi";
+import { toNewsletterSummary } from "../utils/summaries";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -60,6 +61,7 @@ export function registerNewsletterTools(server: McpServer) {
   // Browse newsletters
   server.tool(
     "newsletters_browse",
+    "Returns a summary list of newsletters (id, name, status, visibility, subscribe_on_signup, sort_order). Use newsletters_read with an id or slug to fetch full detail including sender settings, display options, and font configuration.",
     browseParams,
     async (args, _extra) => {
       const newsletters = await ghostApiClient.newsletters.browse(args);
@@ -67,7 +69,7 @@ export function registerNewsletterTools(server: McpServer) {
         content: [
           {
             type: "text",
-            text: JSON.stringify(newsletters, null, 2),
+            text: JSON.stringify(newsletters.map(toNewsletterSummary), null, 2),
           },
         ],
       };

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ghostApiClient } from "../ghostApi";
+import { toPageSummary } from "../utils/summaries";
 
 const browseParams = {
   filter: z.string().optional(),
@@ -72,11 +73,12 @@ const deleteParams = {
 export function registerPageTools(server: McpServer) {
   server.tool(
     "pages_browse",
+    "Returns a summary list of pages (id, title, slug, status, dates, url, tags, authors). Use pages_read with an id or slug to fetch full content including html, SEO fields, and all metadata.",
     browseParams,
     async (args, _extra) => {
       const pages = await ghostApiClient.pages.browse(args);
       return {
-        content: [{ type: "text", text: JSON.stringify(pages, null, 2) }],
+        content: [{ type: "text", text: JSON.stringify(pages.map(toPageSummary), null, 2) }],
       };
     }
   );

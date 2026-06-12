@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ghostApiClient } from "../ghostApi";
+import { toTierSummary } from "../utils/summaries";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -47,6 +48,7 @@ export function registerTierTools(server: McpServer) {
   // Browse tiers
   server.tool(
     "tiers_browse",
+    "Returns a summary list of tiers (id, name, type, active, monthly_price, yearly_price, currency). Use tiers_read with an id or slug to fetch full detail including benefits, welcome_page_url, and description.",
     browseParams,
     async (args, _extra) => {
       const tiers = await ghostApiClient.tiers.browse(args);
@@ -54,7 +56,7 @@ export function registerTierTools(server: McpServer) {
         content: [
           {
             type: "text",
-            text: JSON.stringify(tiers, null, 2),
+            text: JSON.stringify(tiers.map(toTierSummary), null, 2),
           },
         ],
       };

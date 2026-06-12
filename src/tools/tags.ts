@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ghostApiClient } from "../ghostApi";
+import { toTagSummary } from "../utils/summaries";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -35,6 +36,7 @@ export function registerTagTools(server: McpServer) {
   // Browse tags
   server.tool(
     "tags_browse",
+    "Returns a summary list of tags (id, name, slug, description, created_at). Use tags_read with an id or slug to fetch full detail including meta and OG fields.",
     browseParams,
     async (args, _extra) => {
       const tags = await ghostApiClient.tags.browse(args);
@@ -42,7 +44,7 @@ export function registerTagTools(server: McpServer) {
         content: [
           {
             type: "text",
-            text: JSON.stringify(tags, null, 2),
+            text: JSON.stringify(tags.map(toTagSummary), null, 2),
           },
         ],
       };

@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ghostApiClient } from "../ghostApi";
+import { toPostSummary } from "../utils/summaries";
 
 // Parameter schemas as ZodRawShape (object literals)
 const browseParams = {
@@ -78,6 +79,7 @@ export function registerPostTools(server: McpServer) {
   // Browse posts
   server.tool(
     "posts_browse",
+    "Returns a summary list of posts (id, title, slug, status, dates, url, tags, authors). Use posts_read with an id or slug to fetch full content including html, SEO fields, and all metadata.",
     browseParams,
     async (args, _extra) => {
       const posts = await ghostApiClient.posts.browse(args);
@@ -85,7 +87,7 @@ export function registerPostTools(server: McpServer) {
         content: [
           {
             type: "text",
-            text: JSON.stringify(posts, null, 2),
+            text: JSON.stringify(posts.map(toPostSummary), null, 2),
           },
         ],
       };
