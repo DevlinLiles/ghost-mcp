@@ -2,7 +2,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ghostApiClient } from "../ghostApi";
-import { GHOST_API_URL } from "../config";
 import { toPostSummary, DEFAULT_POST_FIELDS, POST_READ_FIELDS } from "../utils/summaries";
 import { textResult, browseEnvelope, toConfirmation, pickFields } from "../utils/respond";
 
@@ -79,9 +78,6 @@ const editParams = {
   title: z.string().optional(),
   ...postMutableFields,
 };
-const metaParams = {
-  id: z.string().describe("Post id"),
-};
 const deleteParams = {
   id: z.string(),
 };
@@ -126,54 +122,6 @@ export function registerPostTools(server: McpServer) {
       if (content === "html") delete post.lexical;
       else delete post.html;
       return textResult(post);
-    }
-  );
-
-  // Meta — full metadata including url, preview_url, tags, authors
-  server.tool(
-    "posts_meta",
-    "Fetch full metadata for a post by id: uuid, url, preview_url (for drafts: {site}/p/{uuid}/), tags, authors, feature image, SEO fields, og/twitter fields. Does not return post body content.",
-    metaParams,
-    async (args, _extra) => {
-      const post = await ghostApiClient.posts.read({ id: args.id, include: "tags,authors" });
-      const uuid: string | undefined = post.uuid;
-      const preview_url = uuid ? `${GHOST_API_URL}/p/${uuid}/` : undefined;
-      const meta: Record<string, unknown> = {
-        id: post.id,
-        uuid,
-        title: post.title,
-        slug: post.slug,
-        status: post.status,
-        visibility: post.visibility,
-        featured: post.featured,
-        email_only: post.email_only,
-        url: post.url,
-        preview_url,
-        canonical_url: post.canonical_url,
-        published_at: post.published_at,
-        created_at: post.created_at,
-        updated_at: post.updated_at,
-        feature_image: post.feature_image,
-        feature_image_alt: post.feature_image_alt,
-        feature_image_caption: post.feature_image_caption,
-        custom_excerpt: post.custom_excerpt,
-        meta_title: post.meta_title,
-        meta_description: post.meta_description,
-        og_title: post.og_title,
-        og_description: post.og_description,
-        og_image: post.og_image,
-        twitter_title: post.twitter_title,
-        twitter_description: post.twitter_description,
-        twitter_image: post.twitter_image,
-        email_subject: post.email_subject,
-        tags: post.tags?.map((t: any) => ({ id: t.id, name: t.name, slug: t.slug, description: t.description })),
-        authors: post.authors?.map((a: any) => ({ id: a.id, name: a.name, slug: a.slug, email: a.email })),
-      };
-      // Drop undefined fields to keep output clean
-      for (const key of Object.keys(meta)) {
-        if (meta[key] === undefined || meta[key] === null) delete meta[key];
-      }
-      return textResult(meta);
     }
   );
 

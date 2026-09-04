@@ -27,10 +27,10 @@ export const DEFAULT_ROLE_FIELDS = "id,name,description";
 // browse defaults (still excludes html/lexical/mobiledoc content).
 export const POST_READ_FIELDS =
   DEFAULT_POST_FIELDS +
-  ",uuid,visibility,email_only,canonical_url,feature_image,feature_image_alt,meta_title,meta_description";
+  ",visibility,email_only,canonical_url,feature_image,feature_image_alt,meta_title,meta_description";
 export const PAGE_READ_FIELDS =
   DEFAULT_PAGE_FIELDS +
-  ",uuid,visibility,canonical_url,feature_image,feature_image_alt,meta_title,meta_description,show_title_and_feature_image";
+  ",visibility,canonical_url,feature_image,feature_image_alt,meta_title,meta_description,show_title_and_feature_image";
 
 export function toPostSummary(post: any) {
   return {
